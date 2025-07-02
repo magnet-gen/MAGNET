@@ -1,915 +1,641 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAGNET: Augmenting Generative Decoders with Representation Learning and Infilling Capabilities</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="utf-8">
+  <meta name="description"
+    content="MAGNET: Augmenting Generative Decoders with Representation Learning and Infilling Capabilities.">
+  <meta property="og:title" content="MAGNET: Augmenting Generative Decoders with Representation Learning and Infilling Capabilities" />
+  <meta property="og:description"
+    content="Transform any pretrained LLM into a unified model for representation learning, text infilling, and text generation.">
+  <meta property="og:url" content="https://arxiv.org/abs/2412.01826" />
+  <meta property="og:image" content="static/images/MAGNET_teaser.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #f8f9fa;
-            min-height: 100vh;
-            margin: 0;
-        }
+  <meta name="twitter:title" content="MAGNET: Augmenting Generative Decoders with Representation Learning and Infilling Capabilities">
+  <meta name="twitter:description" content="Transform any pretrained LLM into a unified model for representation learning, text infilling, and text generation.">
+  <meta name="twitter:image" content="static/images/MAGNET_teaser.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="keywords"
+    content="computer vision, visual query localization, region-based representations, zero-shot localization">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        .container {
-            width: 100%;
-            background: white;
-            overflow: hidden;
-        }
+  <title>MAGNET</title>
+  <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
 
-        .header {
-            background: linear-gradient(135deg, #e74c3c 0%, #8e44ad 50%, #3498db 100%);
-            color: white;
-            padding: 80px 40px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
 
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-            opacity: 0.3;
-        }
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js"></script>
 
-        .header-content {
-            position: relative;
-            z-index: 1;
-        }
+  <style>
+    table {
+      border-top: 1px solid #000;
+      border-bottom: 1px solid #000;
+      border-collapse: collapse;
+      width: 100%;
+    }
 
-        h1 {
-            font-size: 2.8em;
-            margin-bottom: 20px;
-            font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            line-height: 1.2;
-        }
+    th, td {
+      text-align: center;
+      padding: 8px;
+      border: none; /* remove individual cell borders */
+    }
 
-        .authors {
-            font-size: 1.3em;
-            margin-bottom: 15px;
-            opacity: 0.95;
-        }
+    .section-header {
+      font-weight: bold;
+      background-color: #f0f0f0;
+    }
 
-        .affiliation {
-            font-size: 1.1em;
-            opacity: 0.8;
-            margin-bottom: 30px;
-        }
-
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-
-        .btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-
-        .content {
-            padding: 60px 80px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .section {
-            margin-bottom: 60px;
-        }
-
-        .section h2 {
-            font-size: 2.2em;
-            color: #2C3E50;
-            margin-bottom: 30px;
-            padding-bottom: 15px;
-            border-bottom: 3px solid #3498DB;
-            position: relative;
-        }
-
-        .section h2::after {
-            content: '';
-            position: absolute;
-            bottom: -3px;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(90deg, #e74c3c 0%, #8e44ad 50%, #3498db 100%);
-        }
-
-        .abstract {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 40px;
-            border-radius: 15px;
-            border-left: 5px solid transparent;
-            border-image: linear-gradient(135deg, #e74c3c 0%, #8e44ad 50%, #3498db 100%) 1;
-            font-size: 1.1em;
-            line-height: 1.8;
-            text-align: justify;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .methodology {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            align-items: center;
-        }
-
-        .method-text {
-            font-size: 1.1em;
-            line-height: 1.8;
-        }
-
-        .method-text h3 {
-            color: #2C3E50;
-            margin-bottom: 15px;
-            font-size: 1.4em;
-        }
-
-        .method-text ul {
-            margin-left: 20px;
-            margin-top: 15px;
-        }
-
-        .method-text li {
-            margin-bottom: 10px;
-        }
-
-        .figure-placeholder {
-            background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
-            border: 2px dashed #dadce0;
-            border-radius: 15px;
-            padding: 40px;
-            text-align: center;
-            color: #5f6368;
-            font-style: italic;
-            min-height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-
-        .figure-placeholder:hover {
-            border-color: #e74c3c;
-            background: linear-gradient(135deg, #fdf2f2 0%, #f4f1fb 50%, #eef7ff 100%);
-        }
-
-        .methodology .figure-placeholder {
-            min-height: 360px; /* 20% larger than the original 300px */
-            padding: 48px; /* 20% larger than the original 40px */
-        }
-
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 30px;
-        }
-
-        .result-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            border: 1px solid #e9ecef;
-            transition: all 0.3s ease;
-        }
-
-        .result-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
-        }
-
-        .result-card h3 {
-            color: #2C3E50;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-
-        .collapsible-content {
-            transition: all 0.3s ease;
-            overflow: hidden;
-        }
-        
-        .collapsible-content.collapsed {
-            max-height: 0;
-            opacity: 0;
-            margin: 0;
-            padding: 0;
-        }
-        
-        h2:hover {
-            color: #8e44ad;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        th {
-            background: linear-gradient(135deg, #e74c3c 2%, #8e44ad 25%, #3498db 100%);
-            color: white;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 0.9em;
-        }
-
-        tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .highlight {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #8e44ad;
-            margin: 20px 0;
-        }
-
-        .footer {
-            background: linear-gradient(135deg, #2C3E50 0%, #34495e 100%);
-            color: white;
-            text-align: center;
-            padding: 40px;
-        }
-
-        .bibtex {
-            background: #1e1e1e;
-            color: #f8f8f2;
-            padding: 25px;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            overflow-x: auto;
-            margin: 20px 0;
-            border: 1px solid #444;
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 60px 20px;
-            }
-            
-            h1 {
-                font-size: 2.2em;
-            }
-            
-            .content {
-                padding: 40px 20px;
-            }
-            
-            .methodology {
-                grid-template-columns: 1fr;
-                gap: 30px;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-        }
-
-        .table-container {
-            overflow-x: auto;
-            margin: 20px 0;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        .table-title {
-            font-weight: 600;
-            color: #2C3E50;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .author-link {
-            color: inherit;
-            text-decoration: none;
-            border-bottom: 1px solid rgba(255,255,255,0.3);
-            transition: all 0.3s ease;
-        }
-
-        .author-link:hover {
-            border-bottom: 1px solid rgba(255,255,255,0.8);
-            text-shadow: 0 0 8px rgba(255,255,255,0.3);
-        }
-    </style>
+    tr.highlight {
+      background-color: #e8f5e8;
+      font-weight: 600;
+    }
+    .uniform-gif {
+      width: 280px;
+      height: 200px;
+      object-fit: cover;
+    }
+    .small-icon {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      margin-bottom: 0.5em;
+    }
+    .stacked {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  </style>
 </head>
+
 <body>
-    <div class="container">
-        <header class="header">
-            <div class="header-content">
-                <h1>MAGNET: Augmenting Generative Decoders with Representation Learning and Infilling Capabilities</h1>
-                <p class="authors">
-                    <a href="https://savya08.github.io/" class="author-link"><strong>Savya Khosla</strong></a><sup>1,2*</sup>, 
-                    <a href="https://adititiwari19.github.io/" class="author-link"><strong>Aditi Tiwari</strong></a><sup>2</sup>, 
-                    <a href="https://kushalkafle.com/" class="author-link"><strong>Kushal Kafle</strong></a><sup>1</sup>, 
-                    <a href="https://sjenni.github.io/" class="author-link"><strong>Simon Jenni</strong></a><sup>1</sup>, 
-                    <a href="https://hdzhao.github.io/" class="author-link"><strong>Handong Zhao</strong></a><sup>1</sup>, 
-                    <a href="https://research.adobe.com/person/john-collomosse/" class="author-link"><strong>John Collomosse</strong></a><sup>1</sup>, 
-                    <a href="https://research.adobe.com/person/jing-shi/" class="author-link"><strong>Jing Shi</strong></a><sup>1</sup>
-                </p>
-                <p class="affiliation">
-                    <sup>1</sup>Adobe Research, <sup>2</sup>University of Illinois Urbana-Champaign<br>
-                    <sup>*</sup>Work done during internship at Adobe Research
-                </p>
-                <div class="action-buttons">
-                    <a href="https://arxiv.org/abs/2501.08648" class="btn">
-                        📄 Paper
-                    </a>
-                    <a href="#" class="btn">
-                        💻 Code (Coming Soon)
-                    </a>
-                </div>
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title">MAGNET: Augmenting Generative Decoders with Representation Learning and Infilling Capabilities</h1>
+            <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="https://savya08.github.io/" target="_blank"><b>Savya Khosla</b></a><sup>1,2</sup>,
+              <a href="https://adititiwari19.github.io/" target="_blank"><b>Aditi Tiwari</b></a><sup>2</sup>,
+              <a href="https://kushalkafle.com/" target="_blank"><b>Kushal Kafle</b></a><sup>1</sup>,
+              <a href="https://sjenni.github.io/" target="_blank"><b>Simon Jenni</b></a><sup>1</sup>,
+              <a href="https://hdzhao.github.io/" target="_blank"><b>Handong Zhao</b></a><sup>1</sup>,
+              <a href="https://research.adobe.com/person/john-collomosse/" target="_blank"><b>John Collomosse</b></a><sup>1</sup>,
+              <a href="https://jshi31.github.io/jingshi/" target="_blank"><b>Jing Shi</b></a><sup>1</sup>
+            </span><br>
+            <span class="author-block" style="color: #000000;"><sup>1</sup>Adobe Research &emsp; <sup>2</sup>University of Illinois Urbana-Champaign</span><br>
+          </div>
+
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <span class="link-block">
+                  <a href="https://arxiv.org/pdf/2501.08648" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </span>
+                    <span>Paper</span>
+                  </a>
+                </span>
+
+                <span class="link-block">
+                  <a href="mailto:savyak2@illinois.edu" target="_blank"
+                     class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fas fa-envelope"></i>
+                    </span>
+                    <span>Email</span>
+                  </a>
+                </span>
+
+              </div>
             </div>
-        </header>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-        <main class="content">
-            <section class="section">
-                <h2>Abstract</h2>
-                <div class="abstract">
-                    While originally designed for unidirectional generative modeling, decoder-only large language models (LLMs) are increasingly being adapted for bidirectional modeling. However, unidirectional and bidirectional models are typically trained separately with distinct objectives (generation and representation learning). This separation overlooks the opportunity for developing a more versatile language model and for these objectives to complement each other. In this work, we propose <strong>MAGNET</strong>, a method for adapting decoder-only LLMs to generate robust representations and infill missing text spans. MAGNET employs three self-supervised training objectives and introduces an attention mechanism that combines bidirectional and causal attention, enabling unified training across all objectives. Our results demonstrate that LLMs adapted with MAGNET (1) surpass strong text encoders on token-level and sentence-level representation learning tasks, (2) generate contextually appropriate text infills by leveraging past and future contexts, (3) perform open-ended text generation without excessive repetition of words or phrases, and (4) preserve the knowledge and reasoning capability gained by the LLM during pretraining.
-                </div>
-            </section>
+  <!-- Teaser -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column">
+          <img src="figures/teaser.png" alt="MAGNET teaser" class="center" style="width: 900px;">
+          <div class="content">
+            <p>
+              Traditionally, LLMs are trained for text generation using unidirectional attention (depicted by black lines), 
+              whereas text encoders are trained for representation learning using bidirectional attention (depicted by gray lines). 
+              <br>
+              <b>MAGNET adapts the attention mechanism of LLMs to 
+              combine both unidirectional and bidirectional attention, enhancing them with representation learning and infilling 
+              capabilities, while retaining their core generative functions.</b>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-            <section class="section">
-                <h2>Method Overview</h2>
-                <div class="methodology">
-                    <div class="method-text">
-                        <h3>Key Components</h3>
-                        <p>MAGNET transforms decoder-only LLMs into versatile models capable of both generation and representation learning through:</p>
-                        <ul>
-                            <li><strong>Modified Attention Mechanism</strong>: Combines bidirectional and causal attention patterns</li>
-                            <li><strong>Three Training Objectives</strong>:
-                                <ul>
-                                    <li>Masked Next Token Prediction (MNTP)</li>
-                                    <li>Self-Supervised Contrastive Learning (SSCL)</li>
-                                    <li>Missing Span Generation (MSG)</li>
-                                </ul>
-                            </li>
-                            <li><strong>Unified Training</strong>: Simultaneous optimization of all objectives</li>
-                        </ul>
-                        
-                        <div class="highlight">
-                            <strong>Key Innovation:</strong> Unlike previous methods that either focus on generation or representation learning, MAGNET successfully combines both capabilities in a single model without compromising either.
-                        </div>
-                    </div>
-                    <div class="figure-placeholder" style="min-height: 400px; padding: 50px;">
-                        <div style="text-align: center;">
-                            <strong>Figure 1:</strong> Traditional LLMs vs MAGNET attention patterns<br>
-                            <img src="figure1.png" alt="Traditional LLMs vs MAGNET attention patterns" style="width: 100%; height: auto; margin-top: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-                        </div>
-                    </div>
-                </div>
-            </section>
+  <!-- Video Tutorial -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column">
+          <div class="content">
+            <video class="center" width="100%" controls>
+              <source src="figures/tutorial.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section> 
 
-            <section class="section">
-                <h2>Training Objectives</h2>
-            
-                <div class="figure-placeholder">
-                    <div style="text-align: center;">
-                        <strong>Figure 2:</strong> MAGNET training objectives illustration<br>
-                        <img src="figure3.png" alt="MAGNET training objectives illustration" style="max-width: 100%; margin-top: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-                    </div>
-                </div>
-            
-                <div class="figure-placeholder" style="margin-top: 30px;">
-                    <div style="text-align: center;">
-                        <strong>Figure 3:</strong> MAGNET approach overview<br>
-                        <img src="figure4.png" alt="MAGNET approach overview" style="max-width: 100%; margin-top: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-                    </div>
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>Key Contributions</h2>
-                <div class="abstract">
-                    MAGNET introduces a decoding-time framework that augments pretrained language models with latent representations and infilling capabilities, without requiring additional training. It addresses a core limitation in standard left-to-right generation by decoupling content planning from realization, enabling coherent and controllable text generation across a range of tasks. Our approach combines masked next token prediction, self-supervised contrastive learning, and missing span generation into a unified representation-learning objective. Through extensive evaluations—including human judgment, perplexity, and repetition analysis—MAGNET consistently improves coherence, factuality, and fluency across narrative, factual, and open-ended infilling benchmarks. These results demonstrate that smarter decoding, not just larger models, can significantly advance the quality of generative language systems.
-                </div>
-            </section>
+  <!-- Paper abstract -->
+  <section class="section hero is-light">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h3 class="title is-3">Abstract</h3>
+          <div class="content has-text-justified">
+            <p>
+              While originally designed for unidirectional generative modeling, decoder-only large language models (LLMs) 
+              are increasingly being adapted for bidirectional modeling. However, unidirectional and bidirectional models 
+              are typically trained separately with distinct objectives (generation and representation learning). This 
+              separation overlooks the opportunity for developing a more versatile language model and for these objectives 
+              to complement each other. In this work, we propose MAGNET, a method for adapting decoder-only LLMs to generate 
+              robust representations and infill missing text spans. MAGNET employs three self-supervised training objectives 
+              and introduces an attention mechanism that combines bidirectional and causal attention, enabling unified training 
+              across all objectives. Our results demonstrate that LLMs adapted with MAGNET (1) surpass strong text encoders 
+              on token-level and sentence-level representation learning tasks, (2) generate contextually appropriate text 
+              infills by leveraging past and future contexts, (3) perform open-ended text generation without excessive 
+              repetition of words or phrases, and (4) preserve the knowledge and reasoning capability gained by the LLM 
+              during pretraining.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-            <section class="section">
-                <!-- <h2>Results</h2> -->
-                <h2 onclick="toggleSection('results-section')" style="cursor: pointer; user-select: none;">
-                    Results <span id="results-toggle">▼</span>
-                </h2>
-                <div id="results-section" class="collapsible-content">
-                
-                <!-- Word-Level Tasks Table - Full Width -->
-                <div style="margin-bottom: 40px;">
-                    <h3 style="color: #2C3E50; margin-bottom: 20px; font-size: 1.4em;">Word-Level Tasks</h3>
-                    <div class="table-container">
-                        <div class="table-title" style="text-align: center; font-weight: normal;">Table 1: Results on word-level tasks</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Model</th>
-                                    <th>Chunking</th>
-                                    <th>NER</th>
-                                    <th>POS-Tags</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Encoder models</strong></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td>BERT-Large</td>
-                                    <td>71.77</td>
-                                    <td>90.09</td>
-                                    <td>75.12</td>
-                                </tr>
-                                <tr>
-                                    <td>XLNet-Large</td>
-                                    <td>79.70</td>
-                                    <td>93.67</td>
-                                    <td>83.02</td>
-                                </tr>
-                                <tr>
-                                    <td>DeBERTa-Large</td>
-                                    <td>85.74</td>
-                                    <td>94.97</td>
-                                    <td>86.49</td>
-                                </tr>
-                                <tr>
-                                    <td>StructBERT-Large</td>
-                                    <td>89.99</td>
-                                    <td>97.31</td>
-                                    <td>90.86</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Llama 2 models</strong></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td>Llama-2-7B</td>
-                                    <td>88.23</td>
-                                    <td>96.59</td>
-                                    <td>91.53</td>
-                                </tr>
-                                <tr>
-                                    <td>LLM2Vec</td>
-                                    <td>89.66</td>
-                                    <td>96.05</td>
-                                    <td>90.53</td>
-                                </tr>
-                                <tr>
-                                    <td>LLM2Vec[MNTP]</td>
-                                    <td>91.61</td>
-                                    <td>97.16</td>
-                                    <td>92.61</td>
-                                </tr>
-                                <tr style="background-color: #e8f5e8; font-weight: 600;">
-                                    <td>MAGNET</td>
-                                    <td>92.64</td>
-                                    <td>98.31</td>
-                                    <td>93.34</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            
-                <!-- Infilling Tasks Tables  -->
-                <div style="margin-bottom: 40px;">
-                    <h3 style="color: #2C3E50; margin-bottom: 20px; font-size: 1.4em;">Infilling Tasks</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-                        <div class="table-container">
-                            <div class="table-title" style="text-align: center; font-weight: normal;">Table 4: Results on infilling tasks (Perplexity)</div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Method</th>
-                                        <th>ROC Stories</th>
-                                        <th>Wikitext-103</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Llama-2-7B</td>
-                                        <td>13.9347</td>
-                                        <td>22.0399</td>
-                                    </tr>
-                                    <tr style="background-color: #e8f5e8; font-weight: 600;">
-                                        <td>MAGNET</td>
-                                        <td>9.5161</td>
-                                        <td>15.4573</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="table-container">
-                            <div class="table-title" style="text-align: center; font-weight: normal;">Table 5: Human evaluation for infilling (% contextually appropriate)</div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Method</th>
-                                        <th>Score</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Unidirectional Llama-2-7B</td>
-                                        <td>53.5</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Zero-Shot Setup</td>
-                                        <td>5.5</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Five-Shot Setup</td>
-                                        <td>54.5</td>
-                                    </tr>
-                                    <tr style="background-color: #e8f5e8; font-weight: 600;">
-                                        <td>MAGNET</td>
-                                        <td>62.0</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            
-                <!-- Repetition Analysis Table  -->
-                <div style="margin-bottom: 40px;">
-                    <h3 style="color: #2C3E50; margin-bottom: 20px; font-size: 1.4em;">Repetition Analysis</h3>
-                    <div class="table-container">
-                        <div class="table-title" style="text-align: center; font-weight: normal;">Table 6: Repetition problem analysis</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Method</th>
-                                    <th colspan="2">Wikitext-103</th>
-                                    <th colspan="2">ROC Stories</th>
-                                </tr>
-                                <tr>
-                                    <th></th>
-                                    <th>Rep-Sen</th>
-                                    <th>Rep-4</th>
-                                    <th>Rep-Sen</th>
-                                    <th>Rep-4</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Llama-2-7B</td>
-                                    <td>0.0056</td>
-                                    <td>0.0601</td>
-                                    <td>0.0381</td>
-                                    <td>0.0163</td>
-                                </tr>
-                                <tr>
-                                    <td>LLM2Vec</td>
-                                    <td>0.2044</td>
-                                    <td>0.4747</td>
-                                    <td>0.2945</td>
-                                    <td>0.5243</td>
-                                </tr>
-                                <tr style="background-color: #e8f5e8; font-weight: 600;">
-                                    <td>MAGNET</td>
-                                    <td>0.0151</td>
-                                    <td>0.2047</td>
-                                    <td>0.0737</td>
-                                    <td>0.2573</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
-                        Lower scores indicate less repetition. MAGNET significantly reduces repetition compared to LLM2Vec while maintaining strong performance.
-                    </p>
-                </div>
-            
-
-                <div class="figure-placeholder" style="margin-top: 40px; width: 50%; margin-left: auto; margin-right: auto;">
-                    <div style="text-align: center;">
-                        <strong>Figure 5:</strong> Repetition trends during training<br>
-                        <img src="figure5.png" alt="Repetition trends during training" style="max-width: 100%; margin-top: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-                    </div>
-                </div>
-            </section>
-
-            <section class="section">
-                <h2 onclick="toggleSection('knowledge-section')" style="cursor: pointer; user-select: none;">
-                    Knowledge Preservation <span id="knowledge-toggle">▼</span>
-                </h2>
-                <div id="knowledge-section" class="collapsible-content">
-                <!-- <h2>Knowledge Preservation</h2> -->
-                <div class="table-container">
-                    <div class="table-title" style="text-align: center; font-weight: normal;">Table 7: Impact on knowledge and reasoning capabilities</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Model</th>
-                                <th>HellaSwag</th>
-                                <th>BBH</th>
-                                <th colspan="2">ARC</th>
-                                <th>NQ</th>
-                                <th colspan="4">MMLU</th>
-                            </tr>
-                            <tr>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                                <th>Easy</th>
-                                <th>Challenge</th>
-                                <th></th>
-                                <th>Humanities</th>
-                                <th>STEM</th>
-                                <th>Social Science</th>
-                                <th>Other</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Llama-2-7B</td>
-                                <td>75.51</td>
-                                <td>33.57</td>
-                                <td>73.95</td>
-                                <td>44.28</td>
-                                <td>24.02</td>
-                                <td>43.27</td>
-                                <td>36.09</td>
-                                <td>53.04</td>
-                                <td>54.84</td>
-                            </tr>
-                            <tr style="background-color: #e8f5e8;">
-                                <td><strong>MAGNET</strong></td>
-                                <td>75.08</td>
-                                <td>32.22</td>
-                                <td>74.33</td>
-                                <td>44.52</td>
-                                <td>24.22</td>
-                                <td>42.25</td>
-                                <td>36.63</td>
-                                <td>52.64</td>
-                                <td>52.40</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <p style="margin-top: 15px; color: #666;">
-                    MAGNET preserves the original knowledge and reasoning capabilities of Llama-2-7B with minimal impact on performance.
-                </p>
-            </section>
-            
-            <section class="section">
-                <!-- <h2>Additional Analysis</h2> -->
-                <h2 onclick="toggleSection('additional-section')" style="cursor: pointer; user-select: none;">
-                    Additional Analysis <span id="additional-toggle">▼</span>
-                </h2>
-                <div id="additional-section" class="collapsible-content">
-                
-                <!-- Sentence-Level Tasks Table  -->
-                <div style="margin-bottom: 40px;">
-                    <h3 style="color: #2C3E50; margin-bottom: 20px; font-size: 1.4em;">Sentence-Level Tasks</h3>
-                    <div class="table-container">
-                        <div class="table-title" style="text-align: center; font-weight: normal;">Table 2: Results on STS tasks</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Model</th>
-                                    <th>STS12</th>
-                                    <th>STS13</th>
-                                    <th>STS14</th>
-                                    <th>STS15</th>
-                                    <th>STS16</th>
-                                    <th>STS-B</th>
-                                    <th>SICK-R</th>
-                                    <th>Avg</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Encoder models (finetuned using SimCSE)</strong></td>
-                                    <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-                                </tr>
-                                <tr>
-                                    <td>BERT-Base</td>
-                                    <td>68.40</td><td>82.41</td><td>74.38</td><td>80.91</td><td>78.56</td><td>76.85</td><td>72.23</td><td>76.25</td>
-                                </tr>
-                                <tr>
-                                    <td>RoBERTa-Base</td>
-                                    <td>70.16</td><td>81.77</td><td>73.24</td><td>81.36</td><td>80.65</td><td>80.22</td><td>68.56</td><td>76.57</td>
-                                </tr>
-                                <tr>
-                                    <td>RoBERTa-Large</td>
-                                    <td>72.86</td><td>83.99</td><td>75.62</td><td>84.77</td><td>81.80</td><td>81.98</td><td>71.26</td><td>78.90</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Llama 2 models</strong></td>
-                                    <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-                                </tr>
-                                <tr>
-                                    <td>Llama-2-7B</td>
-                                    <td>50.98</td><td>74.02</td><td>62.86</td><td>67.09</td><td>71.03</td><td>63.56</td><td>67.22</td><td>65.25</td>
-                                </tr>
-                                <tr>
-                                    <td>Echo Embeddings</td>
-                                    <td>52.40</td><td>72.40</td><td>61.24</td><td>72.67</td><td>73.51</td><td>65.73</td><td>64.39</td><td>66.05</td>
-                                </tr>
-                                <tr>
-                                    <td>LLM2Vec</td>
-                                    <td>65.39</td><td>79.26</td><td>72.98</td><td>82.72</td><td>81.02</td><td>78.32</td><td>71.77</td><td>75.92</td>
-                                </tr>
-                                <tr style="background-color: #e8f5e8; font-weight: 600;">
-                                    <td>MAGNET</td>
-                                    <td>67.98</td><td>84.66</td><td>77.67</td><td>84.17</td><td>79.44</td><td>82.88</td><td>78.77</td><td>79.36</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            
-                <!-- Clustering Tasks Table  -->
-                <div style="margin-bottom: 40px;">
-                    <h3 style="color: #2C3E50; margin-bottom: 20px; font-size: 1.4em;">Clustering Tasks</h3>
-                    <div class="table-container">
-                        <div class="table-title" style="text-align: center; font-weight: normal;">Table 3: Results on clustering tasks</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Dataset</th>
-                                    <th>BiorxivClustering</th>
-                                    <th>TwentyNewsgroups</th>
-                                    <th>MedrxivClustering</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Echo Embeddings</td>
-                                    <td>25.92</td>
-                                    <td>23.42</td>
-                                    <td>24.30</td>
-                                </tr>
-                                <tr>
-                                    <td>LLM2Vec</td>
-                                    <td>34.69</td>
-                                    <td>30.76</td>
-                                    <td>29.49</td>
-                                </tr>
-                                <tr style="background-color: #e8f5e8; font-weight: 600;">
-                                    <td>MAGNET</td>
-                                    <td>35.10</td>
-                                    <td>53.31</td>
-                                    <td>30.21</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <section class="section">
-                <!-- <h2>Ablation Studies</h2> -->
-                <h2 onclick="toggleSection('ablation-section')" style="cursor: pointer; user-select: none;">
-                    Ablation Studies <span id="ablation-toggle">▼</span>
-                </h2>
-                <div id="ablation-section" class="collapsible-content">
-                
-                <div class="table-container">
-                    <div class="table-title" style="text-align: center; font-weight: normal;">Table 8: Ablation analysis of training objectives</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Training Objectives</th>
-                                <th>Chunking</th>
-                                <th>NER</th>
-                                <th>POS</th>
-                                <th>STS12</th>
-                                <th>STS13</th>
-                                <th>STS14</th>
-                                <th>STS15</th>
-                                <th>STS16</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>MNTP</td>
-                                <td>92.44</td><td>98.11</td><td>93.18</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>
-                            </tr>
-                            <tr>
-                                <td>SSCL</td>
-                                <td>–</td><td>–</td><td>–</td><td>69.06</td><td>84.53</td><td>78.07</td><td>84.09</td><td>78.52</td>
-                            </tr>
-                            <tr>
-                                <td>MNTP + MSG</td>
-                                <td>92.51</td><td>98.20</td><td>93.38</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>
-                            </tr>
-                            <tr>
-                                <td>SSCL + MSG</td>
-                                <td>–</td><td>–</td><td>–</td><td>68.46</td><td>84.52</td><td>77.33</td><td>84.35</td><td>79.17</td>
-                            </tr>
-                            <tr style="background-color: #e8f5e8; font-weight: 600;">
-                                <td>MNTP + SSCL + MSG</td>
-                                <td>92.64</td><td>98.31</td><td>93.34</td><td>67.98</td><td>84.66</td><td>77.67</td><td>84.17</td><td>79.44</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <p style="margin-top: 15px; color: #666;">
-                    This ablation study demonstrates that combining all three objectives (MNTP + SSCL + MSG) provides the best overall performance across both token-level and sentence-level tasks.
-                </p>
-            
-                <div class="figure-placeholder" style="margin-top: 30px;">
-                    <div style="text-align: center;">
-                        <strong>Figure 6:</strong> Training curves comparing MTP vs MNTP objectives<br>
-                        <img src="figure6.png" alt="Training curves comparing MTP vs MNTP objectives" style="max-width: 100%; margin-top: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-                    </div>
-                </div>
-            </section>
-                <div class="bibtex">
-                    @misc{khosla2025magnetaugmentinggenerativedecoders,
-                        title={MAGNET: Augmenting Generative Decoders with Representation Learning and Infilling Capabilities}, 
-                        author={Savya Khosla and Aditi Tiwari and Kushal Kafle and Simon Jenni and Handong Zhao and John Collomosse and Jing Shi},
-                        year={2025},
-                        eprint={2501.08648},
-                        archivePrefix={arXiv},
-                        primaryClass={cs.CL},
-                        url={https://arxiv.org/abs/2501.08648}, 
-                  }
-                </div>
-            </section>
-        </main>
-
-        <footer class="footer">
-            <p>&copy; 2025 - MAGNET: Augmenting Generative Decoders with Representation Learning and Infilling Capabilities</p>
-            <p>Adobe Research & University of Illinois Urbana-Champaign</p>
-        </footer>
+  <!-- Method -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column">
+          <h2 class="title is-3">Method Overview</h2>
+          <div class="content">
+            <h4>Modify the Attention</h4>
+            <p>
+              We modify the attention mechanism of the LLM by updating the attention mask to combine causal and bidirectional 
+              attention.
+              <br>
+              <li>
+                All <b><span style="color:rgb(72, 114, 212);">context tokens</span></b> (shown in blue) attend to all other 
+                context tokens in the sequnce.
+              </li>
+              <li>
+                All <b><span style="color:rgb(2, 195, 89);">span tokens</span></b> (shown in green) have causal attention 
+                among themselves and also attend to all context tokens.
+              </li>
+            </p>
+          </div>
+          <img src="figures/attention.png" alt="MAGNET attention" class="center" style="width: 800px;">
+        </div>
+      </div>
     </div>
 
-    <script>
-        function toggleSection(sectionId) {
-            const content = document.getElementById(sectionId);
-            const toggle = document.getElementById(sectionId.replace('-section', '-toggle'));
-            
-            if (content.classList.contains('collapsed')) {
-                content.classList.remove('collapsed');
-                toggle.textContent = '▼';
-            } else {
-                content.classList.add('collapsed');
-                toggle.textContent = '▶';
-            }
-        }
-    
-        // Initialize sections as expanded by default
-        document.addEventListener('DOMContentLoaded', function() {
-            // All sections start expanded, so no additional initialization needed
-        });
-        </script>
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column">
+          <div class="content">
+            <br>
+            <h4>Fine-Tune the Model</h4>
+            <p>
+              We fine-tune the model using three self-supervised learning objectives, enabling it to understand and leverage the 
+              modified attention mechanism. Fine-tuning is performed with LoRA for efficiency.
+            </p>
+          </div>
+          <img src="figures/objectives.png" alt="MAGNET objectives" class="center" style="width: 850px;">
+        </div>
+      </div>
+    </div>
+  </section>
 
+  <!-- Results -->
+  <section class="section hero is-light">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column">
+          <h2 class="title is-3">Results</h2>
+          <p>
+            <br>
+          </p>
+
+          <div class="content">
+            <details>
+              <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; margin-bottom: 1em;">
+                Word-Level Representation Learning
+              </summary>
+
+              <p>
+                MAGNET outperforms LLM2Vec, demonstrating the benefits of unified training for representation learning. 
+                MAGNET-adapted LLaMa 2-7B also outperforms strong encoders.
+              </p>
+
+              <table cellspacing="0" cellpadding="4">
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>Chunking</th>
+                    <th>NER</th>
+                    <th>POS-Tags</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="section-header" colspan="4">Encoder Models</td>
+                  </tr>
+                  <tr>
+                    <td>BERT-Large</td>
+                    <td>71.77</td>
+                    <td>90.09</td>
+                    <td>75.12</td>
+                  </tr>
+                  <tr>
+                    <td>XLNet-Large</td>
+                    <td>79.70</td>
+                    <td>93.67</td>
+                    <td>83.02</td>
+                  </tr>
+                  <tr>
+                    <td>DeBERTa-Large</td>
+                    <td>85.74</td>
+                    <td>94.97</td>
+                    <td>86.49</td>
+                  </tr>
+                  <tr>
+                    <td>StructBERT-Large</td>
+                    <td>89.99</td>
+                    <td>97.31</td>
+                    <td>90.86</td>
+                  </tr>
+
+                  <tr>
+                    <td class="section-header" colspan="4">Llama 2 Models</td>
+                  </tr>
+                  <tr>
+                    <td>Llama-2-7B</td>
+                    <td>88.23</td>
+                    <td>96.59</td>
+                    <td>91.53</td>
+                  </tr>
+                  <tr>
+                    <td>LLM2Vec</td>
+                    <td>89.66</td>
+                    <td>96.05</td>
+                    <td>90.53</td>
+                  </tr>
+                  <tr>
+                    <td>LLM2Vec[MNTP]</td>
+                    <td>91.61</td>
+                    <td>97.16</td>
+                    <td>92.61</td>
+                  </tr>
+                  <tr style="background-color: #e8f5e8; font-weight: 600;">
+                    <td>MAGNET</td>
+                    <td>92.64</td>
+                    <td>98.31</td>
+                    <td>93.34</td>
+                  </tr>
+                </tbody>
+              </table>
+            </details>
+          </div>
+
+          <div class="content">
+            <details>
+              <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; margin-bottom: 1em;">
+                Sentence-Level Representation Learning
+              </summary>
+
+              <p>
+                MAGNET also outperforms LLM2Vec and Echo Embeddings on sentence-level representation learning, despite these 
+                baselines being trained specifically for text encoding.
+              </p>
+
+              <table cellspacing="0" cellpadding="4">
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>STS12</th>
+                    <th>STS13</th>
+                    <th>STS14</th>
+                    <th>STS15</th>
+                    <th>STS16</th>
+                    <th>STS-B</th>
+                    <th>SICK-R</th>
+                    <th>Avg</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="section-header" colspan="9">Encoder models (finetuned using SimCSE)</td>
+                  </tr>
+                  <tr>
+                    <td>BERT-Base</td>
+                    <td>68.40</td>
+                    <td>82.41</td>
+                    <td>74.38</td>
+                    <td>80.91</td>
+                    <td>78.56</td>
+                    <td>76.85</td>
+                    <td>72.23</td>
+                    <td>76.25</td>
+                  </tr>
+                  <tr>
+                    <td>RoBERTa-Base</td>
+                    <td>70.16</td>
+                    <td>81.77</td>
+                    <td>73.24</td>
+                    <td>81.36</td>
+                    <td>80.65</td>
+                    <td>80.22</td>
+                    <td>68.56</td>
+                    <td>76.57</td>
+                  </tr>
+                  <tr>
+                    <td>RoBERTa-Large</td>
+                    <td><b>72.86</b></td>
+                    <td>83.99</td>
+                    <td>75.62</td>
+                    <td><b>84.77</b></td>
+                    <td><b>81.80</b></td>
+                    <td>81.98</td>
+                    <td>71.26</td>
+                    <td>78.90</td>
+                  </tr>
+              
+                  <tr>
+                    <td class="section-header" colspan="9">Llama 2 models</td>
+                  </tr>
+                  <tr>
+                    <td>Llama-2-7B</td>
+                    <td>50.98</td>
+                    <td>74.02</td>
+                    <td>62.86</td>
+                    <td>67.09</td>
+                    <td>71.03</td>
+                    <td>63.56</td>
+                    <td>67.22</td>
+                    <td>65.25</td>
+                  </tr>
+                  <tr>
+                    <td>Echo Embeddings</td>
+                    <td>52.40</td>
+                    <td>72.40</td>
+                    <td>61.24</td>
+                    <td>72.67</td>
+                    <td>73.51</td>
+                    <td>65.73</td>
+                    <td>64.39</td>
+                    <td>66.05</td>
+                  </tr>
+                  <tr>
+                    <td>LLM2Vec</td>
+                    <td>65.39</td>
+                    <td>79.26</td>
+                    <td>72.98</td>
+                    <td>82.72</td>
+                    <td>81.02</td>
+                    <td>78.32</td>
+                    <td>71.77</td>
+                    <td>75.92</td>
+                  </tr>
+                  <tr style="background-color: #e8f5e8;">
+                    <td><b>MAGNET</b></td>
+                    <td>67.98</td>
+                    <td><b>84.66</b></td>
+                    <td><b>77.67</b></td>
+                    <td>84.17</td>
+                    <td>79.44</td>
+                    <td><b>82.88</b></td>
+                    <td><b>78.77</b></td>
+                    <td><b>79.36</b></td>
+                  </tr>
+                </tbody>
+              </table>
+
+            </details>
+          </div>
+
+          <div class="content">
+            <details>
+              <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; margin-bottom: 1em;">
+                Text Infilling
+              </summary>
+
+              <p>
+                MAGNET enables bidirectional context access, making it particularly effective for text infilling. 
+                Human evaluators also rate MAGNET's generated text as more coherent compared to other setups.
+              </p>
+
+              <table cellspacing="0" cellpadding="4">
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th>Human Evaluation Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Unidirectional Llama-2-7B</td>
+                    <td>53.5</td>
+                  </tr>
+                  <tr>
+                    <td>Zero-Shot Setup</td>
+                    <td>5.5</td>
+                  </tr>
+                  <tr>
+                    <td>Five-Shot Setup</td>
+                    <td>54.5</td>
+                  </tr>
+                  <tr style="background-color: #e8f5e8; font-weight: 600;">
+                    <td>MAGNET</td>
+                    <td>62.0</td>
+                  </tr>
+                </tbody>
+              </table>
+
+            </details>
+          </div>
+
+          <div class="content">
+            <details>
+              <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; margin-bottom: 1em;">
+                Repetition Problem
+              </summary>
+
+              <p>
+                Unlike other encoder models like BERT and LLM2Vec, MAGNET retains the ability to generate coherent and 
+                non-repetitive text.
+              </p>
+
+              <table cellspacing="0" cellpadding="4" style="border-collapse: collapse; width: 100%;">
+                <thead>
+                  <tr>
+                    <th style="text-align: center; padding: 8px;">Model</th>
+                    <th style="text-align: center; padding: 8px;">Generated Text</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="2" style="padding: 8px;">
+                      <b>Initial phrase:</b> <span style="background-color: yellow;">The film was well received</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">BERT</td>
+                    <td style="padding: 8px;">
+                      <span style="background-color: yellow;">The film was well received</span> and the " " " " " " " " " " " " " " " " " are " " are " are " are are " are are the are the the the the the the the the the the the so so and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and ...
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">LLM2Vec</td>
+                    <td style="padding: 8px;">
+                      <span style="background-color: yellow;">The film was well received</span> by critics and audiences alike.<br>
+                      The film was well received by critics and audiences alike.<br>
+                      The film was well received by critics and audiences alike.<br>
+                      The film was well received by critics and audiences alike.<br>
+                      The film was well received by critics and audiences alike.<br>
+                      The film was well received by critics and audiences alike.<br>
+                      The film was well received by critics and audiences alike...
+                    </td>
+                  </tr>
+                  <tr style="background-color: #e8f5e8;">
+                    <td style="padding: 8px;">MAGNET</td>
+                    <td style="padding: 8px;">
+                      <span style="background-color: yellow;">The film was well received</span> by critics and audiences alike and was nominated for several awards including the Academy Award for Best Visual Effects and the Saturn Award for Best Science Fiction Film. The film was also a commercial success and grossed over $100 million at the box office.<br><br>
+                      == Plot ==<br>
+                      In the year 2018, a meteorite crashes into the Pacific Ocean, causing a massive tsunami that destroys most of the world's coastal cities. The survivors of the disaster band together ...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+            </details>
+          </div>
+
+          <div class="content">
+            <details>
+              <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; margin-bottom: 1em;">
+                Knowledge and Reasoning Tasks
+              </summary>
+
+              <p>
+                MAGNET maintains the knowledge and reasoning abilities acquired during LLM pretraining.
+              </p>
+
+              <table cellspacing="0" cellpadding="4" style="border-collapse: collapse; width: 100%; text-align: center;">
+                <thead>
+                  <tr>
+                    <th rowspan="2" style="padding: 8px; text-align: left;">Model</th>
+                    <th rowspan="2" style="padding: 8px;">HellaSwag</th>
+                    <th rowspan="2" style="padding: 8px;">BBH</th>
+                    <th colspan="2" style="padding: 8px;">ARC</th>
+                    <th rowspan="2" style="padding: 8px;">NQ</th>
+                    <th colspan="4" style="padding: 8px;">MMLU</th>
+                  </tr>
+                  <tr>
+                    <th style="padding: 8px;">Easy</th>
+                    <th style="padding: 8px;">Challenge</th>
+                    <th style="padding: 8px;">Humanities</th>
+                    <th style="padding: 8px;">STEM</th>
+                    <th style="padding: 8px;">Social Science</th>
+                    <th style="padding: 8px;">Other</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding: 8px; text-align: left;">Llama-2-7B</td>
+                    <td>75.51</td>
+                    <td>33.57</td>
+                    <td>73.95</td>
+                    <td>44.28</td>
+                    <td>24.02</td>
+                    <td>43.27</td>
+                    <td>36.09</td>
+                    <td>53.04</td>
+                    <td>54.84</td>
+                  </tr>
+                  <tr style="background-color: #e8f5e8;">
+                    <td style="padding: 8px; text-align: left;">MAGNET</td>
+                    <td>75.08</td>
+                    <td>32.22</td>
+                    <td>74.33</td>
+                    <td>44.52</td>
+                    <td>24.22</td>
+                    <td>42.25</td>
+                    <td>36.63</td>
+                    <td>52.64</td>
+                    <td>52.40</td>
+                  </tr>
+                </tbody>
+              </table>              
+
+            </details>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BibTex citation -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content is-dark">
+      <h2 class="title is-3">BibTex</h2>
+      <pre><code>@inproceedings{khosla2025magnet,
+    title={MAGNET: Augmenting Generative Decoders with Representation Learning and Infilling Capabilities},
+    author={Savya Khosla and  Aditi Tiwari and Kushal Kafle and Simon Jenni and Handong Zhao and John Collomosse and Jing Shi1},
+    journal={Association for Computational Linguistics},
+    year={2025}
+}</code></pre>
+    </div>
+  </section>
 </body>
+
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+          <p>
+            This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+            <br> This website is licensed under a <a rel="license"  href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+            Commons Attribution-ShareAlike 4.0 International License</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
 </html>
