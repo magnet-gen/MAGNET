@@ -46,13 +46,11 @@
       border-collapse: collapse;
       width: 100%;
     }
-
     th, td {
       text-align: center;
       padding: 8px;
       border: none; /* remove individual cell borders */
     }
-
     .section-header {
       font-weight: bold;
       background-color: #f0f0f0;
@@ -151,22 +149,6 @@
       </div>
     </div>
   </section>
-
-  <!-- Video Tutorial -->
-  <section class="section">
-    <div class="container is-max-desktop">
-      <div class="columns is-centered has-text-centered">
-        <div class="column">
-          <div class="content">
-            <video class="center" width="100%" controls>
-              <source src="figures/tutorial.mp4" type="video/mp4">
-              Your browser does not support the video tag.
-            </video>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section> 
 
   <!-- Paper abstract -->
   <section class="section hero is-light">
@@ -453,8 +435,80 @@
               </summary>
 
               <p>
-                MAGNET enables bidirectional context access, making it particularly effective for text infilling. 
+                MAGNET enables bidirectional context access, making it particularly effective for text infilling.
+              </p>
+
+              <table cellspacing="0" cellpadding="4" style="border-collapse: collapse; width: 100%;">
+                <thead>
+                  <tr>
+                    <th style="text-align: center; padding: 8px;">Method</th>
+                    <th style="text-align: center; padding: 8px;">Infilled Line</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Example 1 -->
+                  <tr>
+                    <td colspan="2" style="padding: 8px; font-style: italic; font-weight: 600; background-color: #e8e8e8;">
+                      John was at the gym. <span>_____</span> He couldn’t get the barbell off his chest. He was too embarrassed to call for help. John suffocated as the weights crushed his chest.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">Uni-Llama</td>
+                    <td style="padding: 8px;">He was on the treadmill, running at a steady pace.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">FS-Llama</td>
+                    <td style="padding: 8px;">He was doing bench presses.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">MAGNET</td>
+                    <td style="padding: 8px;">John was doing bench presses when he accidentally dropped the barbell on top.</td>
+                  </tr>
+              
+                  <!-- Example 2 -->
+                  <tr>
+                    <td colspan="2" style="padding: 8px; font-style: italic; font-weight: 600; background-color: #e8e8e8;">
+                      Toni took a trip to the local fair with her family. <span>_____</span> The balloon was red and star shaped. Unfortunately it slipped out of her hands. She was sad to see it go.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">Uni-Llama</td>
+                    <td style="padding: 8px;">She won a prize for her drawing of a cat.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">FS-Llama</td>
+                    <td style="padding: 8px;">She won it in a game of darts.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">MAGNET</td>
+                    <td style="padding: 8px;">She was so excited to see the balloon vendor and bought a red one.</td>
+                  </tr>
+              
+                  <!-- Example 3 -->
+                  <tr>
+                    <td colspan="2" style="padding: 8px; font-style: italic; font-weight: 600; background-color: #e8e8e8;">
+                      I was resting on my couch. <span>_____</span> They raised their water guns. I immediately ran. I went outside and sprayed them with the hose when they followed.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">Uni-Llama</td>
+                    <td style="padding: 8px;">I was feeling a bit under the weather, so I decided to take a break.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">FS-Llama</td>
+                    <td style="padding: 8px;">My neighbor’s kids were playing tag in the backyard.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px;">MAGNET</td>
+                    <td style="padding: 8px;">I heard a noise and looked out the window and saw two boys with water guns.</td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              <p>
+                <br>
                 Human evaluators also rate MAGNET's generated text as more coherent compared to other setups.
+                The evaluation scores denote the percentage of infillings that were considered contextually appropriate by human evaluators.
               </p>
 
               <table cellspacing="0" cellpadding="4">
@@ -529,7 +583,7 @@
                       The film was well received by critics and audiences alike...
                     </td>
                   </tr>
-                  <tr style="background-color: #e8f5e8;">
+                  <tr style="background-color: #e8e8e8;">
                     <td style="padding: 8px;">MAGNET</td>
                     <td style="padding: 8px;">
                       <span style="background-color: yellow;">The film was well received</span> by critics and audiences alike and was nominated for several awards including the Academy Award for Best Visual Effects and the Saturn Award for Best Science Fiction Film. The film was also a commercial success and grossed over $100 million at the box office.<br><br>
@@ -607,6 +661,23 @@
       </div>
     </div>
   </section>
+
+  <!-- Video Tutorial -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column">
+          <h2 class="title is-3">Video Tutorial</h2>
+          <div class="content">
+            <video class="center" width="100%" controls>
+              <source src="figures/tutorial.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section> 
 
   <!-- BibTex citation -->
   <section class="section" id="BibTeX">
