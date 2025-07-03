@@ -8,7 +8,7 @@
 	else
 		root["bulmaSlider"] = factory();
 })(typeof self !== 'undefined' ? self : this, function() {
-return /******/ (function(modules) { // webpackBootstrap
+return /******/ (function(modules) { 
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
 /******/
